@@ -21,6 +21,7 @@
 #include "encoders.h"
 #include <iostream>
 #include <QSslConfiguration>
+#include <QFile>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class ClientPOP3Widget; }
@@ -55,8 +56,17 @@ public:
         RETR,
         DELE,
         RSET,
+        PRXA,
     };
 
+    enum TypeCommands{
+        receive,
+        transmit,
+        local,
+    };
+
+    void cPRXA();
+    void aPRXA(QString answer);
     void cUSER();
     void aUSER(QString answer);
     void cPASS();
@@ -89,7 +99,7 @@ public:
     void GoToPrevPage();
     void GoToFirstPage();
     void GoToLastPage();
-    void LogMessage(const QString &s);
+    void LogMessage(const QString &s, TypeCommands t);
 
 public slots:
     void socketReady();
@@ -111,11 +121,16 @@ private:
     QLineEdit *passLine;
     QLineEdit *adressLine;
     QLineEdit *portLine;
+    QCheckBox *useProxy;
+    QLineEdit *adressProxyLine;
+    QLineEdit *portProxyLine;
     QString name;
     QVector<Message> messages;
     int messagesNumber;
     int messagesSize;
     int pageSize = 20;
     int currentPage = 1;
+    bool usedProxy = false;
+    bool connectedToServer = false;
 };
 #endif // CLIENTPOP3WIDGET_H

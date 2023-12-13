@@ -409,6 +409,9 @@ release\moc_clientpop3widget.cpp: ..\ClientPOP3\clientpop3widget.h \
 		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtCore5Compat\qtextcodec.h \
 		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtNetwork\QSslConfiguration \
 		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtNetwork\qsslconfiguration.h \
+		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtCore\QFile \
+		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtCore\qfile.h \
+		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtCore\qfiledevice.h \
 		release\moc_predefs.h \
 		..\..\..\..\Qt\6.6.1\msvc2019_64\bin\moc.exe
 	C:\Qt\6.6.1\msvc2019_64\bin\moc.exe $(DEFINES) --compiler-flavor=msvc --include "C:/Projects/Network applications/Lab2 - POP3 SSL TCP Client/build-ClientPOP3-Desktop_Qt_6_6_1_MSVC2019_64bit-Debug/release/moc_predefs.h" -IC:/Qt/6.6.1/msvc2019_64/mkspecs/win32-msvc -I"C:/Projects/Network applications/Lab2 - POP3 SSL TCP Client/ClientPOP3" -IC:/Qt/6.6.1/msvc2019_64/include -IC:/Qt/6.6.1/msvc2019_64/include/QtWidgets -IC:/Qt/6.6.1/msvc2019_64/include/QtGui -IC:/Qt/6.6.1/msvc2019_64/include/QtNetwork -IC:/Qt/6.6.1/msvc2019_64/include/QtCore5Compat -IC:/Qt/6.6.1/msvc2019_64/include/QtCore -I. -I"C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\include" -I"C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\ATLMFC\include" -I"C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\VS\include" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.22000.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\10\\include\10.0.22000.0\\um" -I"C:\Program Files (x86)\Windows Kits\10\\include\10.0.22000.0\\shared" -I"C:\Program Files (x86)\Windows Kits\10\\include\10.0.22000.0\\winrt" -I"C:\Program Files (x86)\Windows Kits\10\\include\10.0.22000.0\\cppwinrt" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.8\include\um" ..\ClientPOP3\clientpop3widget.h -o release\moc_clientpop3widget.cpp
@@ -786,6 +789,9 @@ release\main.obj: ..\ClientPOP3\main.cpp ..\ClientPOP3\clientpop3widget.h \
 		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtCore5Compat\qtextcodec.h \
 		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtNetwork\QSslConfiguration \
 		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtNetwork\qsslconfiguration.h \
+		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtCore\QFile \
+		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtCore\qfile.h \
+		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtCore\qfiledevice.h \
 		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtWidgets\QApplication \
 		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtWidgets\qapplication.h \
 		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtCore\qcoreapplication.h \
@@ -1038,7 +1044,32 @@ release\clientpop3widget.obj: ..\ClientPOP3\clientpop3widget.cpp ..\ClientPOP3\c
 		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtCore5Compat\qtextcodec.h \
 		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtNetwork\QSslConfiguration \
 		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtNetwork\qsslconfiguration.h \
-		ui_clientpop3widget.h
+		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtCore\QFile \
+		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtCore\qfile.h \
+		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtCore\qfiledevice.h \
+		ui_clientpop3widget.h \
+		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtCore\QVariant \
+		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtWidgets\QApplication \
+		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtWidgets\qapplication.h \
+		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtCore\qcoreapplication.h \
+		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtCore\qeventloop.h \
+		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtCore\qcoreapplication_platform.h \
+		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtCore\qfuture.h \
+		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtCore\qfutureinterface.h \
+		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtCore\qmutex.h \
+		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtCore\qdeadlinetimer.h \
+		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtCore\qelapsedtimer.h \
+		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtCore\qtsan_impl.h \
+		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtCore\qresultstore.h \
+		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtCore\qfuture_impl.h \
+		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtCore\qthreadpool.h \
+		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtCore\qthread.h \
+		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtCore\qrunnable.h \
+		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtCore\qexception.h \
+		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtCore\qpromise.h \
+		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtGui\qguiapplication.h \
+		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtGui\qinputmethod.h \
+		..\..\..\..\Qt\6.6.1\msvc2019_64\include\QtGui\qguiapplication_platform.h
 
 release\moc_clientpop3widget.obj: release\moc_clientpop3widget.cpp 
 

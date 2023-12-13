@@ -105,8 +105,16 @@ void ClientPOP3Widget::socketReady(){
         QByteArray byteArray = socket->readLine();
         QString s = QString::fromLatin1(byteArray);
         if (s.contains("+OK") && s.contains("ready")){
-            LogMessage("Connected to the server");
-            cUSER();
+            LogMessage(s.chopped(2), TypeCommands::receive);
+            if (usedProxy == true && connectedToServer == false){
+                cPRXA();
+            }
+            if (usedProxy == true && connectedToServer == true){
+                cUSER();
+            }
+            if (usedProxy == false){
+                cUSER();
+            }
         } else{
             auto pair = commandsQueue->at(0);
             switch (pair.first) {
@@ -131,6 +139,9 @@ void ClientPOP3Widget::socketReady(){
             case RSET:
                 aRSET(s);
                 break;
+            case PRXA:
+                aPRXA(s);
+                break;
             }
         }
         s.clear();
@@ -138,7 +149,7 @@ void ClientPOP3Widget::socketReady(){
 }
 
 void ClientPOP3Widget::socketDisconnect(){
-    LogMessage("Socket disconnect");
+    LogMessage("Socket disconnect", TypeCommands::local);
     HideEmailForm();
     HideAuthForm();
     ShowAuthForm();
@@ -187,6 +198,33 @@ void ClientPOP3Widget::ShowAuthForm(){
     passLayout->addWidget(passLine);
     authLayout->addLayout(passLayout);
 
+    QHBoxLayout *useProxyLayout = new QHBoxLayout();
+    useProxyLayout->setAlignment(Qt::AlignLeft);
+    QLabel *useProxyLabel = new QLabel("Use proxy?");
+    useProxyLabel->setFont(*font);
+    useProxyLayout->addWidget(useProxyLabel);
+    useProxy = new QCheckBox();
+    useProxyLayout->addWidget(useProxy);
+    authLayout->addLayout(useProxyLayout);
+
+    QHBoxLayout *adressProxyLayout = new QHBoxLayout();
+    QLabel *adressProxyLabel = new QLabel("Adress proxy");
+    adressProxyLabel->setFont(*font);
+    adressProxyLayout->addWidget(adressProxyLabel);
+    adressProxyLine = new QLineEdit(localHost.toString());
+    adressProxyLine->setFont(*font);
+    adressProxyLayout->addWidget(adressProxyLine);
+    authLayout->addLayout(adressProxyLayout);
+
+    QHBoxLayout *portProxyLayout = new QHBoxLayout();
+    QLabel *portProxyLabel = new QLabel("Port proxy");
+    portProxyLabel->setFont(*font);
+    portProxyLayout->addWidget(portProxyLabel);
+    portProxyLine = new QLineEdit("1080");
+    portProxyLine->setFont(*font);
+    portProxyLayout->addWidget(portProxyLine);
+    authLayout->addLayout(portProxyLayout);
+
     QHBoxLayout *buttonLayout = new QHBoxLayout();
     QPushButton *button = new QPushButton("Log in");
     button->setFont(*font);
@@ -233,6 +271,8 @@ void ClientPOP3Widget::HideEmailForm(){
     setWindowTitle("Client POP3 Widget");
     currentPage = 1;
     commandsQueue->clear();
+    usedProxy = false;
+    connectedToServer = false;
 }
 
 void ClientPOP3Widget::ShowPagination(){
@@ -332,13 +372,40 @@ void ClientPOP3Widget::ShowEmailsInRange(){
 
 void ClientPOP3Widget::LogIn(){
     auto config = QSslConfiguration::defaultConfiguration();
-    config.setPeerVerifyMode(QSslSocket::VerifyNone);
-    socket->setSslConfiguration(config);
 
-    socket->connectToHostEncrypted(adressLine->text(), portLine->text().toInt());
+    // Load CA Certificates from the bundle file
+    QFile caBundleFile(QStringLiteral("morality.pp.ua.ca-bundle"));
+    if (caBundleFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QByteArray dataCABundle = caBundleFile.readAll();
+        caBundleFile.close();
+        QList<QSslCertificate> caCertificates = QSslCertificate::fromData(dataCABundle, QSsl::Pem);
+        if (!caCertificates.isEmpty()) {
+            config.setCaCertificates(caCertificates);
+        } else {
+            LogMessage("Failed to load CA certificates from the bundle file", TypeCommands::local);
+        }
+    } else {
+        LogMessage("Could not open CA bundle file", TypeCommands::local);
+    }
+
+    config.setPeerVerifyMode(QSslSocket::VerifyNone);
+
+    qInfo() << QSslSocket::sslLibraryVersionString();
+    qInfo() << QSslSocket::sslLibraryBuildVersionString();
+
+    socket->setSslConfiguration(config);
+    usedProxy = useProxy->checkState() == Qt::Checked ? true : false;
+    // use proxy
+    if (usedProxy){
+        socket->connectToHostEncrypted(adressProxyLine->text(), portProxyLine->text().toInt());
+    }
+    // use direct connection
+    else {
+        socket->connectToHostEncrypted(adressLine->text(), portLine->text().toInt());
+    }
     bool state = socket->waitForConnected(1000);
     if (state == false){
-        LogMessage("Cannot connect to the server");
+        LogMessage("Cannot connect to the server", TypeCommands::local);
     }
 }
 
@@ -405,60 +472,85 @@ void ClientPOP3Widget::CheckMessage(int state, int index){
 }
 
 
-void ClientPOP3Widget::LogMessage(const QString &s){
-    log->append(s);
-    std::cout << s.toStdString() << std::endl;
+void ClientPOP3Widget::LogMessage(const QString &s, TypeCommands t){
+    QString result;
+    if (t == TypeCommands::receive){
+        result.append("Receive < ");
+    }
+    if (t == TypeCommands::transmit){
+        result.append("Transmit > ");
+    }
+    result.append(s);
+    log->append(result);
+    qInfo() << result << Qt::endl;
+}
+
+void ClientPOP3Widget::cPRXA(){
+    QString adrServer = adressLine->text();
+    QString port = portLine->text();
+    QString command = "PRXA " + adrServer + " " + port + "\r\n";
+    socket->write(command.toLatin1());
+    commandsQueue->append(QPair<Commands, QVector<QString>>(Commands::PRXA, NULL));
+    LogMessage(command.chopped(2), TypeCommands::transmit);
+}
+
+void ClientPOP3Widget::aPRXA(QString answer){
+    if (answer[0] == '+'){
+        connectedToServer = true;
+    }
+    if (answer[0] == '-'){
+        socket->close();
+    }
+    if (!commandsQueue->isEmpty())
+        commandsQueue->removeFirst();
+    LogMessage(answer.chopped(2), TypeCommands::receive);
 }
 
 void ClientPOP3Widget::cUSER(){
     QString name_ = emailLine->text();
-    QString commandName = "USER " + name_ + "\r\n";
-    socket->write(commandName.toLatin1());
+    QString command = "USER " + name_ + "\r\n";
     name = name_;
     commandsQueue->append(QPair<Commands, QVector<QString>>(Commands::USER, NULL));
-    LogMessage(commandName.chopped(2));
+    socket->write(command.toLatin1());
+    LogMessage(command.chopped(2), TypeCommands::transmit);
 }
 
 void ClientPOP3Widget::aUSER(QString answer){
     if (answer[0] == '+'){
-        LogMessage("Name is correct");
         cPASS();
-    } else {
-        LogMessage("Name is incorrect");
+    }else{
+        socket->close();
     }
-    commandsQueue->removeFirst();
-    LogMessage(answer.chopped(2));
+    if (!commandsQueue->isEmpty())
+        commandsQueue->removeFirst();
+    LogMessage(answer.chopped(2), TypeCommands::receive);
 }
 
 void ClientPOP3Widget::cPASS(){
     QString pass_ = passLine->text();
-    QString commandPass = "PASS " + pass_ + "\r\n";
-    socket->write(commandPass.toLatin1());
+    QString command = "PASS " + pass_ + "\r\n";
     commandsQueue->append(QPair<Commands, QVector<QString>>(Commands::PASS, NULL));
-    LogMessage("PASS ***");
+    socket->write(command.toLatin1());
+    LogMessage("PASS ***", TypeCommands::transmit);
 }
 
 void ClientPOP3Widget::aPASS(QString answer){
     if (answer[0] == '+'){
-        LogMessage("Password is correct");
         HideAuthForm();
         ShowEmailForm();
-    } else {
-        if (answer.contains("-ERR malformed command")){
-            LogMessage("Password is incorrect");
-        }
-        if (answer.contains("-ERR [AUTH] Application-specific password required")){
-            LogMessage("Required specific application password");
-        }
+    }else{
+        socket->close();
     }
-    commandsQueue->removeFirst();
+    if (!commandsQueue->isEmpty())
+        commandsQueue->removeFirst();
+    LogMessage(answer.chopped(2), TypeCommands::receive);
 }
 
 void ClientPOP3Widget::cSTAT(){
-    QString commandStat = "STAT\r\n";
-    socket->write(commandStat.toLatin1());
+    QString command = "STAT\r\n";
     commandsQueue->append(QPair<Commands, QVector<QString>>(Commands::STAT, NULL));
-    LogMessage(commandStat.chopped(2));
+    socket->write(command.toLatin1());
+    LogMessage(command.chopped(2), TypeCommands::transmit);
 }
 
 void ClientPOP3Widget::aSTAT(QString answer){
@@ -474,15 +566,16 @@ void ClientPOP3Widget::aSTAT(QString answer){
         stateLayout->addWidget(messagesSize_);
         ShowPagination();
     }
-    commandsQueue->removeFirst();
-    LogMessage(answer.chopped(2));
+    if (!commandsQueue->isEmpty())
+        commandsQueue->removeFirst();
+    LogMessage(answer.chopped(2), TypeCommands::receive);
 }
 
 void ClientPOP3Widget::cRETR(int number){
-    QString commandRETR = "RETR " + QString::number(number) + "\r\n";
-    socket->write(commandRETR.toLatin1());
+    QString command = "RETR " + QString::number(number) + "\r\n";
     commandsQueue->append(QPair<Commands, QVector<QString>>(Commands::RETR, QVector<QString>({QString::number(number)})));
-    LogMessage(commandRETR.chopped(2));
+    socket->write(command.toLatin1());
+    LogMessage(command.chopped(2), TypeCommands::transmit);
 }
 
 void ClientPOP3Widget::aRETR(QString answer, QVector<QString> args){
@@ -495,7 +588,8 @@ void ClientPOP3Widget::aRETR(QString answer, QVector<QString> args){
         if (!answer.contains("message follows")){
             // if the end of messega
             if (answer.at(0) == '.' && answer.size() == 3){
-                commandsQueue->removeFirst();
+                if (!commandsQueue->isEmpty())
+                    commandsQueue->removeFirst();
                 ShowMessage(index);
             }
             else{
@@ -508,25 +602,27 @@ void ClientPOP3Widget::aRETR(QString answer, QVector<QString> args){
         }
     }
     if (answer.contains("+OK")){
-        LogMessage(answer.chopped(2) + " " + args[0]);
+        LogMessage(answer.chopped(2), TypeCommands::receive);
     }
 }
 
 void ClientPOP3Widget::cDELE(int number){
-    QString commandDele = "DELE " + QString::number(number) + "\r\n";
-    socket->write(commandDele.toLatin1());
+    QString command = "DELE " + QString::number(number) + "\r\n";
     commandsQueue->append(QPair<Commands, QVector<QString>>(Commands::DELE, QVector<QString>({QString::number(number)})));
-    LogMessage(commandDele.chopped(2));
+    socket->write(command.toLatin1());
+    LogMessage(command.chopped(2), TypeCommands::transmit);
 }
 
 void ClientPOP3Widget::aDELE(QString answer, QVector<QString> args){
     int index = -1;
+    // find index of message
     for (int i = 0; i < messages.size(); i++){
         if (messages[i].getId() == args[0].toInt()){
             index = i;
             break;
         }
     }
+    // if message deleted block check box
     QLayoutItem *item = messagesLayout->itemAt(index);
     QLayout *layout = item->layout();
     QCheckBox *cb = (QCheckBox*)layout->itemAt(0)->widget();
@@ -538,19 +634,21 @@ void ClientPOP3Widget::aDELE(QString answer, QVector<QString> args){
         messages[index].setCheck(false);
         cb->setCheckState(Qt::Unchecked);
     }
-    LogMessage(answer.chopped(2));
-    commandsQueue->removeFirst();
+    if (!commandsQueue->isEmpty())
+        commandsQueue->removeFirst();
+    LogMessage(answer.chopped(2), TypeCommands::receive);
 }
 
 void ClientPOP3Widget::cRSET(){
-    QString commandRSET = "RSET\r\n";
-    socket->write(commandRSET.toLatin1());
+    QString command = "RSET\r\n";
     commandsQueue->append(QPair<Commands, QVector<QString>>(Commands::RSET, NULL));
-    LogMessage(commandRSET.chopped(2));
+    socket->write(command.toLatin1());
+    LogMessage(command.chopped(2), TypeCommands::transmit);
 }
 
 void ClientPOP3Widget::aRSET(QString answer){
     if (answer[0] == '+'){
+        // uncheck all messages
         for (int i = 0; i < messagesLayout->count(); i++){
             QLayoutItem *item = messagesLayout->itemAt(i);
             QLayout *layout = item->layout();
@@ -560,23 +658,23 @@ void ClientPOP3Widget::aRSET(QString answer){
             messages[i].setCheck(false);
         }
     }
-    LogMessage(answer.chopped(2));
-    commandsQueue->removeFirst();
+    LogMessage(answer.chopped(2), TypeCommands::receive);
+    if (!commandsQueue->isEmpty())
+        commandsQueue->removeFirst();
 }
 
 void ClientPOP3Widget::cQUIT(){
     QString commandQUIT = "QUIT\r\n";
     socket->write(commandQUIT.toLatin1());
     commandsQueue->append(QPair<Commands, QVector<QString>>(Commands::QUIT, NULL));
-    LogMessage(commandQUIT.chopped(2));
+    LogMessage(commandQUIT.chopped(2), TypeCommands::transmit);
 }
 
 void ClientPOP3Widget::aQUIT(QString answer){
     if (answer[0] == '+'){
-        HideEmailForm();
+        socket->close();
     }
-    LogMessage(answer.chopped(2));
-    if (commandsQueue->isEmpty() == false){
+    if (!commandsQueue->isEmpty())
         commandsQueue->removeFirst();
-    }
+    LogMessage(answer.chopped(2), TypeCommands::receive);
 }

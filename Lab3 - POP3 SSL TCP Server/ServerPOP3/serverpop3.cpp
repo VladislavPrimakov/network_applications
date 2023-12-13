@@ -320,28 +320,56 @@ ServerPOP3::ServerPOP3(QWidget *w) {
 
 void ServerPOP3::startServer(){
     auto config = QSslConfiguration::defaultConfiguration();
-    config.setCaCertificates(QSslCertificate::fromPath(QStringLiteral("rootCA.csr")));
 
-    QFile certificateFile(QStringLiteral("server.crt"));
-    if (certificateFile.open(QIODevice::ReadOnly | QIODevice::Text))
-        config.setLocalCertificate(QSslCertificate(certificateFile.readAll(), QSsl::Pem));
-    else
-        LogMessage("Could not open certificate file");
-
-    QFile keyFile(QStringLiteral("server.key"));
+    // Load CA Certificates from the bundle file
+    QFile caBundleFile(QStringLiteral("morality.pp.ua.ca-bundle"));
+    if (caBundleFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QByteArray dataCABundle = caBundleFile.readAll();
+        caBundleFile.close();
+        QList<QSslCertificate> caCertificates = QSslCertificate::fromData(dataCABundle, QSsl::Pem);
+        if (!caCertificates.isEmpty()) {
+            config.setCaCertificates(caCertificates);
+        } else {
+            LogMessage("Failed to load CA certificates from the bundle file");
+        }
+    } else {
+        LogMessage("Could not open CA bundle file");
+    }
+    // Load Server Certificate
+    QFile certificateFile(QStringLiteral("morality.pp.ua.crt"));
+    if (certificateFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QByteArray dataCertificate = certificateFile.readAll();
+        certificateFile.close();
+        QSslCertificate certificate(dataCertificate, QSsl::Pem);
+        if (!certificate.isNull()) {
+            config.setLocalCertificate(certificate);
+        } else {
+            LogMessage("Server certificate is not valid");
+        }
+    } else {
+        LogMessage("Could not open server certificate file");
+    }
+    // Load Server Key
+    QFile keyFile(QStringLiteral("morality.pp.ua.key"));
     if (keyFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
         QSslKey key(keyFile.readAll(), QSsl::Rsa, QSsl::Pem, QSsl::PrivateKey);
-        if (key.isNull())
-            LogMessage("Key is not valid");
-        config.setPrivateKey(key);
+        keyFile.close();
+
+        if (key.isNull()) {
+            LogMessage("Server key is not valid");
+        } else {
+            config.setPrivateKey(key);
+        }
     } else {
-        LogMessage("Could not open key file");
+        LogMessage("Could not open server key file");
     }
 
     config.setPeerVerifyMode(QSslSocket::VerifyNone);
     setSslConfiguration(config);
     sslConf = config;
 
+    qInfo() << QSslSocket::sslLibraryVersionString();
+    qInfo() << QSslSocket::sslLibraryBuildVersionString();
 
     if(listen(QHostAddress::LocalHost, 995)){
         LogMessage("Listening: " + serverAddress().toString() + ":" + QString::number(serverPort()));
@@ -363,9 +391,6 @@ void ServerPOP3::LogMessage(const QString s){
 void ServerPOP3::userNewConnection(){
     QSslSocket *userSocket = qobject_cast<QSslSocket *>(nextPendingConnection());
 
-    QSslConfiguration conf;
-    conf.setPeerVerifyMode(QSslSocket::VerifyNone);
-    userSocket->setSslConfiguration(conf);
     connect(userSocket, &QSslSocket::disconnected, this, &ServerPOP3::userSocketDisconnected);
     connect(userSocket, &QSslSocket::readyRead, this, &ServerPOP3::userSocketReady);
 

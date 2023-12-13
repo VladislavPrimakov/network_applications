@@ -20,6 +20,8 @@ HEADERS += \
 FORMS += \
     serverpop3widget.ui
 
+# LIBS += C:/Qt/Tools/OpenSSLv3/Win_x64/lib/ -llibssl
+
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin

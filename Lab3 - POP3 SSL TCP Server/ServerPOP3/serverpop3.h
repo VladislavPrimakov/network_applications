@@ -96,7 +96,6 @@ private:
     QVBoxLayout *mainLayout;
     QTextBrowser *log;
     QMap<QSslSocket*, User> users;
-    QSslConfiguration m_sslConfiguration;
     int index = 0;
     QSslConfiguration sslConf;
 };
